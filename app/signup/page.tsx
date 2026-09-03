@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { SignupSchema } from "@/lib/validation/schemas";
@@ -12,8 +12,26 @@ const FIELD_ERROR_MESSAGES: Record<string, string> = {
     password: "Password must be at least 8 characters.",
 };
 
+// Only follow a callbackUrl that points somewhere inside this app — never an
+// absolute or protocol-relative URL, which would be an open redirect.
+function safeInternalPath(raw: string | null): string | null {
+    if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return null;
+    return raw;
+}
+
 export default function SignupPage() {
+    return (
+        <Suspense fallback={null}>
+            <SignupForm />
+        </Suspense>
+    );
+}
+
+function SignupForm() {
     const router = useRouter();
+    const callbackUrl = safeInternalPath(
+        useSearchParams().get("callbackUrl")
+    );
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -63,16 +81,18 @@ export default function SignupPage() {
 
             setSuccess(true);
 
-            // Establish a session immediately so the user lands on the
-            // workspace-creation step already authenticated.
+            // Establish a session immediately so the user lands on the next
+            // step already authenticated.
             await signIn("credentials", {
                 email: parsed.data.email,
                 password: parsed.data.password,
                 redirect: false,
             });
 
+            // If they came from an invite link (?callbackUrl=/invite/accept?...),
+            // send them there. Otherwise, normal signup -> set up a workspace.
             setTimeout(() => {
-                router.push("/create-workspace");
+                router.push(callbackUrl ?? "/create-workspace");
             }, 1200);
         } catch {
             setError("Something went wrong. Please try again in a moment.");
@@ -152,7 +172,7 @@ export default function SignupPage() {
 
                     {success && (
                         <p className="text-sm text-green-600 dark:text-green-400">
-                            Account created! Redirecting you to set up your workspace...
+                            Account created! Redirecting...
                         </p>
                     )}
 

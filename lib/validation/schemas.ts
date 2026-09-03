@@ -22,7 +22,21 @@ export const InviteMemberSchema = z.object({
   role: z.enum(["admin", "editor", "viewer"]),
 });
 
+// Body for POST /api/workspaces/[workspaceId]/invites — workspaceId comes from
+// the URL path, never the request body.
+export const CreateInviteSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  role: z.enum(["admin", "editor", "viewer"]),
+});
+
+// Body for POST /api/invites/accept.
+export const AcceptInviteSchema = z.object({
+  token: z.string().min(1, "Invite token is required"),
+});
+
 export type SignupInput = z.infer<typeof SignupSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type CreateWorkspaceInput = z.infer<typeof CreateWorkspaceSchema>;
 export type InviteMemberInput = z.infer<typeof InviteMemberSchema>;
+export type CreateInviteInput = z.infer<typeof CreateInviteSchema>;
+export type AcceptInviteInput = z.infer<typeof AcceptInviteSchema>;
