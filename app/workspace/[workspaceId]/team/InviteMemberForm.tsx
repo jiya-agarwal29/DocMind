@@ -2,12 +2,15 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { Check, Copy, Loader2 } from "lucide-react";
+import { useToast } from "@/components/ToastProvider";
 import { CreateInviteSchema } from "@/lib/validation/schemas";
 
 type Role = "admin" | "editor" | "viewer";
 
 export function InviteMemberForm({ workspaceId }: { workspaceId: string }) {
     const router = useRouter();
+    const { showToast } = useToast();
     const [email, setEmail] = useState("");
     const [role, setRole] = useState<Role>("viewer");
     const [error, setError] = useState<string | null>(null);
@@ -47,6 +50,7 @@ export function InviteMemberForm({ workspaceId }: { workspaceId: string }) {
             setInviteUrl(data.inviteUrl ?? null);
             setEmail("");
             setRole("viewer");
+            showToast("Invite created");
             router.refresh();
         } catch {
             setError("Something went wrong. Please try again in a moment.");
@@ -60,6 +64,7 @@ export function InviteMemberForm({ workspaceId }: { workspaceId: string }) {
         try {
             await navigator.clipboard.writeText(inviteUrl);
             setCopied(true);
+            showToast("Link copied to clipboard");
         } catch {
             setCopied(false);
         }
@@ -80,7 +85,7 @@ export function InviteMemberForm({ workspaceId }: { workspaceId: string }) {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="rounded-md border border-black/[.12] bg-transparent px-3 py-2 text-sm text-zinc-950 outline-none focus:border-zinc-500 dark:border-white/[.15] dark:text-zinc-50"
+                    className="rounded-md border border-black/[.12] bg-transparent px-3 py-2 text-sm text-zinc-950 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 dark:border-white/[.15] dark:text-zinc-50 dark:focus:border-indigo-400"
                 />
             </div>
 
@@ -95,7 +100,7 @@ export function InviteMemberForm({ workspaceId }: { workspaceId: string }) {
                     id="invite-role"
                     value={role}
                     onChange={(e) => setRole(e.target.value as Role)}
-                    className="rounded-md border border-black/[.12] bg-transparent px-3 py-2 text-sm text-zinc-950 outline-none focus:border-zinc-500 dark:border-white/[.15] dark:text-zinc-50"
+                    className="rounded-md border border-black/[.12] bg-transparent px-3 py-2 text-sm text-zinc-950 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 dark:border-white/[.15] dark:text-zinc-50 dark:focus:border-indigo-400"
                 >
                     <option value="viewer">Viewer — read-only</option>
                     <option value="editor">Editor — write/edit docs</option>
@@ -110,13 +115,14 @@ export function InviteMemberForm({ workspaceId }: { workspaceId: string }) {
             <button
                 type="submit"
                 disabled={isSubmitting}
-                className="mt-2 flex h-10 items-center justify-center rounded-full bg-foreground text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-60 dark:hover:bg-[#ccc]"
+                className="mt-2 flex h-10 items-center justify-center gap-1.5 rounded-full bg-indigo-600 text-sm font-medium text-white transition-all duration-150 hover:bg-indigo-700 hover:shadow-sm active:scale-[0.98] disabled:opacity-60 dark:bg-indigo-500 dark:hover:bg-indigo-400"
             >
+                {isSubmitting && <Loader2 size={14} className="animate-spin" />}
                 {isSubmitting ? "Creating invite..." : "Create invite"}
             </button>
 
             {inviteUrl && (
-                <div className="mt-2 flex flex-col gap-2 rounded-md border border-black/[.08] bg-zinc-50 p-3 dark:border-white/[.145] dark:bg-zinc-900">
+                <div className="animate-fade-in-scale mt-2 flex flex-col gap-2 rounded-md border border-black/[.08] bg-zinc-50 p-3 dark:border-white/[.145] dark:bg-zinc-900">
                     <p className="text-xs text-zinc-600 dark:text-zinc-400">
                         Email sending isn&apos;t wired up yet — share this link with
                         the invitee:
@@ -127,8 +133,13 @@ export function InviteMemberForm({ workspaceId }: { workspaceId: string }) {
                     <button
                         type="button"
                         onClick={copyLink}
-                        className="self-start rounded-full border border-black/[.12] px-3 py-1 text-xs font-medium text-zinc-800 transition-colors hover:bg-black/[.04] dark:border-white/[.15] dark:text-zinc-200 dark:hover:bg-white/[.06]"
+                        className={`flex items-center gap-1.5 self-start rounded-full border px-3 py-1 text-xs font-medium transition-all duration-150 active:scale-[0.98] ${
+                            copied
+                                ? "border-green-200 text-green-700 dark:border-green-800 dark:text-green-400"
+                                : "border-black/[.12] text-zinc-800 hover:bg-black/[.04] dark:border-white/[.15] dark:text-zinc-200 dark:hover:bg-white/[.06]"
+                        }`}
                     >
+                        {copied ? <Check size={12} /> : <Copy size={12} />}
                         {copied ? "Copied" : "Copy link"}
                     </button>
                 </div>

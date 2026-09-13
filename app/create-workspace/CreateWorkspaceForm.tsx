@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { CreateWorkspaceSchema } from "@/lib/validation/schemas";
 
 export function CreateWorkspaceForm() {
@@ -57,7 +58,7 @@ export function CreateWorkspaceForm() {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="rounded-md border border-black/[.12] bg-transparent px-3 py-2 text-sm text-zinc-950 outline-none focus:border-zinc-500 dark:border-white/[.15] dark:text-zinc-50"
+                    className="rounded-md border border-black/[.12] bg-transparent px-3 py-2 text-sm text-zinc-950 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 dark:border-white/[.15] dark:text-zinc-50 dark:focus:border-indigo-400"
                 />
             </div>
 
@@ -68,8 +69,9 @@ export function CreateWorkspaceForm() {
             <button
                 type="submit"
                 disabled={isSubmitting}
-                className="mt-2 flex h-10 items-center justify-center rounded-full bg-foreground text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-60 dark:hover:bg-[#ccc]"
+                className="mt-2 flex h-10 items-center justify-center gap-1.5 rounded-full bg-indigo-600 text-sm font-medium text-white transition-all duration-150 hover:bg-indigo-700 hover:shadow-sm active:scale-[0.98] disabled:opacity-60 dark:bg-indigo-500 dark:hover:bg-indigo-400"
             >
+                {isSubmitting && <Loader2 size={14} className="animate-spin" />}
                 {isSubmitting ? "Creating workspace..." : "Create workspace"}
             </button>
         </form>

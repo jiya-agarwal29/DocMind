@@ -2,16 +2,12 @@ import mongoose from "mongoose";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth/authOptions";
-import { getMembership } from "@/lib/auth/getMembership";
+import { getMembership, type MembershipRole } from "@/lib/auth/getMembership";
 import { connectDB } from "@/lib/db/connect";
 import { User, Membership, Invite } from "@/lib/db/models";
+import { NotAuthorized } from "@/components/NotAuthorized";
+import { RoleBadge } from "@/components/RoleBadge";
 import { InviteMemberForm } from "./InviteMemberForm";
-
-const ROLE_LABELS: Record<string, string> = {
-    admin: "Admin",
-    editor: "Editor",
-    viewer: "Viewer",
-};
 
 async function loadTeam(workspaceId: string) {
     await connectDB();
@@ -45,32 +41,17 @@ async function loadTeam(workspaceId: string) {
                 id: m._id.toString(),
                 name: u?.name ?? "Unknown user",
                 email: u?.email ?? "—",
-                role: m.role as string,
+                role: m.role as MembershipRole,
             };
         }),
         invites: pendingInvites.map((inv) => ({
             id: inv._id.toString(),
             email: inv.email as string,
-            role: inv.role as string,
+            role: inv.role as MembershipRole,
             expiresAt: new Date(inv.expiresAt).toLocaleDateString(),
             expired: new Date(inv.expiresAt).getTime() < now,
         })),
     };
-}
-
-function NotAuthorized() {
-    return (
-        <div className="flex flex-1 items-center justify-center bg-zinc-50 px-4 dark:bg-black">
-            <div className="w-full max-w-sm rounded-xl border border-black/[.08] bg-white p-8 dark:border-white/[.145] dark:bg-zinc-950">
-                <h1 className="text-2xl font-semibold text-zinc-950 dark:text-zinc-50">
-                    You don&apos;t have access
-                </h1>
-                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                    Only admins of this workspace can manage the team.
-                </p>
-            </div>
-        </div>
-    );
 }
 
 export default async function TeamPage({
@@ -86,19 +67,19 @@ export default async function TeamPage({
     }
 
     if (!mongoose.isValidObjectId(workspaceId)) {
-        return <NotAuthorized />;
+        return <NotAuthorized message="Only admins of this workspace can manage the team." />;
     }
 
     // Authorization: admin of THIS workspace only.
     const role = await getMembership(session.user.id, workspaceId);
     if (role !== "admin") {
-        return <NotAuthorized />;
+        return <NotAuthorized message="Only admins of this workspace can manage the team." />;
     }
 
     const { members, invites } = await loadTeam(workspaceId);
 
     return (
-        <div className="mx-auto w-full max-w-2xl px-4 py-12">
+        <div className="animate-fade-in-up mx-auto w-full max-w-2xl px-8 py-10">
             <h1 className="text-2xl font-semibold text-zinc-950 dark:text-zinc-50">
                 Team
             </h1>
@@ -114,7 +95,7 @@ export default async function TeamPage({
                     {members.map((m) => (
                         <li
                             key={m.id}
-                            className="flex items-center justify-between px-4 py-3"
+                            className="flex items-center justify-between px-4 py-3 transition-colors hover:bg-black/[.02] dark:hover:bg-white/[.03]"
                         >
                             <div className="min-w-0">
                                 <p className="truncate text-sm font-medium text-zinc-950 dark:text-zinc-50">
@@ -124,9 +105,7 @@ export default async function TeamPage({
                                     {m.email}
                                 </p>
                             </div>
-                            <span className="ml-4 shrink-0 rounded-full bg-black/[.06] px-2.5 py-0.5 text-xs font-medium text-zinc-700 dark:bg-white/[.08] dark:text-zinc-300">
-                                {ROLE_LABELS[m.role] ?? m.role}
-                            </span>
+                            <RoleBadge role={m.role} className="ml-4 shrink-0" />
                         </li>
                     ))}
                 </ul>
@@ -145,7 +124,7 @@ export default async function TeamPage({
                         {invites.map((inv) => (
                             <li
                                 key={inv.id}
-                                className="flex items-center justify-between px-4 py-3"
+                                className="flex items-center justify-between px-4 py-3 transition-colors hover:bg-black/[.02] dark:hover:bg-white/[.03]"
                             >
                                 <div className="min-w-0">
                                     <p className="truncate text-sm font-medium text-zinc-950 dark:text-zinc-50">
@@ -157,9 +136,7 @@ export default async function TeamPage({
                                             : `Expires ${inv.expiresAt}`}
                                     </p>
                                 </div>
-                                <span className="ml-4 shrink-0 rounded-full bg-black/[.06] px-2.5 py-0.5 text-xs font-medium text-zinc-700 dark:bg-white/[.08] dark:text-zinc-300">
-                                    {ROLE_LABELS[inv.role] ?? inv.role}
-                                </span>
+                                <RoleBadge role={inv.role} className="ml-4 shrink-0" />
                             </li>
                         ))}
                     </ul>

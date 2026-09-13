@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
 import { signIn } from "next-auth/react";
 
 export default function LoginPage() {
@@ -13,7 +14,7 @@ export default function LoginPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     async function handleSubmit(e: FormEvent) {
-        e.preventDefault();
+        e.preventDefault();//necessary to write with e:form event to prevent full page loader
         setError(null);
         setIsSubmitting(true);
 
@@ -39,7 +40,7 @@ export default function LoginPage() {
 
     return (
         <div className="flex flex-1 items-center justify-center bg-zinc-50 px-4 dark:bg-black">
-            <div className="w-full max-w-sm rounded-xl border border-black/[.08] bg-white p-8 dark:border-white/[.145] dark:bg-zinc-950">
+            <div className="animate-fade-in-up w-full max-w-sm rounded-xl border border-black/[.08] bg-white p-8 dark:border-white/[.145] dark:bg-zinc-950">
                 <h1 className="text-2xl font-semibold text-zinc-950 dark:text-zinc-50">
                     Log in
                 </h1>
@@ -62,7 +63,7 @@ export default function LoginPage() {
                             autoComplete="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="rounded-md border border-black/[.12] bg-transparent px-3 py-2 text-sm text-zinc-950 outline-none focus:border-zinc-500 dark:border-white/[.15] dark:text-zinc-50"
+                            className="rounded-md border border-black/[.12] bg-transparent px-3 py-2 text-sm text-zinc-950 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 dark:border-white/[.15] dark:text-zinc-50 dark:focus:border-indigo-400"
                         />
                     </div>
 
@@ -80,7 +81,7 @@ export default function LoginPage() {
                             autoComplete="current-password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="rounded-md border border-black/[.12] bg-transparent px-3 py-2 text-sm text-zinc-950 outline-none focus:border-zinc-500 dark:border-white/[.15] dark:text-zinc-50"
+                            className="rounded-md border border-black/[.12] bg-transparent px-3 py-2 text-sm text-zinc-950 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 dark:border-white/[.15] dark:text-zinc-50 dark:focus:border-indigo-400"
                         />
                     </div>
 
@@ -91,8 +92,9 @@ export default function LoginPage() {
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="mt-2 flex h-10 items-center justify-center rounded-full bg-foreground text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-60 dark:hover:bg-[#ccc]"
+                        className="mt-2 flex h-10 items-center justify-center gap-1.5 rounded-full bg-indigo-600 text-sm font-medium text-white transition-all duration-150 hover:bg-indigo-700 hover:shadow-sm active:scale-[0.98] disabled:opacity-60 dark:bg-indigo-500 dark:hover:bg-indigo-400"
                     >
+                        {isSubmitting && <Loader2 size={14} className="animate-spin" />}
                         {isSubmitting ? "Logging in..." : "Log in"}
                     </button>
                 </form>
@@ -101,7 +103,7 @@ export default function LoginPage() {
                     Don&apos;t have an account?{" "}
                     <Link
                         href="/signup"
-                        className="font-medium text-zinc-950 hover:underline dark:text-zinc-50"
+                        className="font-medium text-indigo-600 hover:underline dark:text-indigo-400"
                     >
                         Sign up
                     </Link>
