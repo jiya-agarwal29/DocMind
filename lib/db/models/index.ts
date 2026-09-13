@@ -8,3 +8,5 @@ export {
     type InviteRole,
     type InviteStatus,
 } from "./Invite";
+export { Folder, type IFolder } from "./Folder";
+export { Document, type IDocument } from "./Document";
