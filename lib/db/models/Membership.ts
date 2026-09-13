@@ -33,6 +33,6 @@ const MembershipSchema = new Schema<IMembership>(
 
 MembershipSchema.index({ userId: 1, workspaceId: 1 }, { unique: true });
 
-export const Membership =
+export const Membership =//The Next.js hot-reload safety pattern — "reuse this model if it already exists, otherwise create it" — same as every other model file.
     mongoose.models.Membership ||
     mongoose.model<IMembership>("Membership", MembershipSchema);
