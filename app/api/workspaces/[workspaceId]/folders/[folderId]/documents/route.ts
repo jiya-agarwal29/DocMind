@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/db/connect";
 import { Folder, Document } from "@/lib/db/models";
 import { requireWorkspaceMember, requireWorkspaceEditor } from "@/lib/auth/guards";
 import { CreateDocumentSchema } from "@/lib/validation/schemas";
+import { indexDocument } from "@/lib/rag/indexDocument";
 
 export async function GET(
     request: Request,
@@ -82,6 +83,11 @@ export async function POST(
         title,
         content,
         createdBy: guard.userId,
+    });
+
+    // Best-effort: search indexing must never block the document save.
+    indexDocument(document).catch((err) => {
+        console.error("Failed to index document for search:", err);
     });
 
     return NextResponse.json(

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { ChevronDown, Folder, LogOut, Users } from "lucide-react";
+import { ChevronDown, Folder, LogOut, Sparkles, Users } from "lucide-react";
 import { RoleBadge } from "@/components/RoleBadge";
 import type { MembershipRole } from "@/lib/auth/getMembership";
 
@@ -37,7 +37,9 @@ export function Sidebar({
 
     const homeHref = `/workspace/${workspaceId}`;
     const teamHref = `/workspace/${workspaceId}/team`;
+    const searchHref = `/workspace/${workspaceId}/search`;
     const isTeamActive = pathname === teamHref;
+    const isSearchActive = pathname === searchHref;
 
     return (
         <aside className="flex w-[260px] shrink-0 flex-col border-r border-black/[.08] bg-zinc-50 px-3.5 py-5 dark:border-white/[.08] dark:bg-zinc-950">
@@ -67,8 +69,20 @@ export function Sidebar({
             </div>
 
             <Link
-                href={teamHref}
+                href={searchHref}
                 className={`mt-3 flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors ${
+                    isSearchActive
+                        ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300"
+                        : "text-zinc-700 hover:bg-black/[.04] dark:text-zinc-300 dark:hover:bg-white/[.06]"
+                }`}
+            >
+                <Sparkles size={16} strokeWidth={2} />
+                <span>AI Search</span>
+            </Link>
+
+            <Link
+                href={teamHref}
+                className={`mt-0.5 flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors ${
                     isTeamActive
                         ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300"
                         : "text-zinc-700 hover:bg-black/[.04] dark:text-zinc-300 dark:hover:bg-white/[.06]"

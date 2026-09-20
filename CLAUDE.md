@@ -12,7 +12,7 @@ says so instead of guessing.
 - Frontend: Next.js 14 (App Router) + TypeScript + Tailwind CSS
 - Backend: Next.js API routes
 - Database: MongoDB Atlas (+ Atlas Vector Search for RAG)
-- AI: Claude API for embeddings + answer generation
+- AI: Voyage AI for embeddings, Claude API for answer generation
 - Auth: Role-based access control (admin / editor / viewer), scoped per workspace
 - Deployment (later phase): Docker + AWS + GitHub Actions CI/CD
 

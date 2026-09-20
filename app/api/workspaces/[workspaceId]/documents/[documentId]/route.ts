@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/db/connect";
 import { Folder, Document } from "@/lib/db/models";
 import { requireWorkspaceMember, requireWorkspaceEditor } from "@/lib/auth/guards";
 import { UpdateDocumentSchema } from "@/lib/validation/schemas";
+import { indexDocument, deleteDocumentChunks } from "@/lib/rag/indexDocument";
 
 export async function GET(
     request: Request,
@@ -92,6 +93,14 @@ export async function PATCH(
 
     await document.save();
 
+    // Only content changes affect searchable text — skip re-indexing on a
+    // pure title/folder move. Best-effort: never blocks the response.
+    if (content !== undefined) {
+        indexDocument(document).catch((err) => {
+            console.error("Failed to re-index document for search:", err);
+        });
+    }
+
     return NextResponse.json({
         document: {
             id: document._id.toString(),
@@ -127,6 +136,7 @@ export async function DELETE(
     }
 
     await document.deleteOne();
+    await deleteDocumentChunks(document._id);
 
     return NextResponse.json({ ok: true });
 }

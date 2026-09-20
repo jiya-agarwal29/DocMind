@@ -6,9 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "rag:create-index": "node scripts/create-vector-index.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.127.0",
     "bcryptjs": "^3.0.3",
     "lucide-react": "^1.45.0",
     "mongoose": "^9.9.2",

@@ -62,6 +62,11 @@ export const UpdateDocumentSchema = z
     message: "At least one field must be provided",
   });
 
+// Body for POST /api/workspaces/[workspaceId]/search.
+export const AskQuestionSchema = z.object({
+  question: z.string().min(1, "Question is required").trim(),
+});
+
 export type SignupInput = z.infer<typeof SignupSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type CreateWorkspaceInput = z.infer<typeof CreateWorkspaceSchema>;
@@ -72,3 +77,4 @@ export type CreateFolderInput = z.infer<typeof CreateFolderSchema>;
 export type RenameFolderInput = z.infer<typeof RenameFolderSchema>;
 export type CreateDocumentInput = z.infer<typeof CreateDocumentSchema>;
 export type UpdateDocumentInput = z.infer<typeof UpdateDocumentSchema>;
+export type AskQuestionInput = z.infer<typeof AskQuestionSchema>;

@@ -10,3 +10,4 @@ export {
 } from "./Invite";
 export { Folder, type IFolder } from "./Folder";
 export { Document, type IDocument } from "./Document";
+export { DocumentChunk, type IDocumentChunk } from "./DocumentChunk";
