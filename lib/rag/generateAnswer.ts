@@ -1,17 +1,13 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { RetrievedChunk } from "./retrieve";
 
 const ANTHROPIC_MODEL = "claude-opus-5";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5:7b-instruct";
 
-// retrieve.ts returns up to 8 chunks, each up to ~3200 chars (chunkText.ts's
-// TARGET_CHARS, ~800 tokens at ~4 chars/token) => ~6400 tokens of source
-// content alone, plus the system prompt, question, and citation headers.
-// Ollama's default num_ctx (2048-4096 depending on model) would silently
-// truncate that, dropping chunks out of context without any error — so this
-// is set well above the worst case rather than left to the model's default.
 const OLLAMA_NUM_CTX = 16384;
 
 const SYSTEM_PROMPT = `You are DocMind's AI search assistant. Answer the user's question using ONLY the numbered source excerpts provided — they are the only documents you have access to, and nothing else.
@@ -26,13 +22,6 @@ export async function generateAnswer(
     chunks: RetrievedChunk[],
     citationNumbers: Map<string, number>
 ): Promise<string> {
-    // citationNumbers is keyed by documentId and built by search.ts from the
-    // exact same deduplicated list it returns to the frontend as `citations`
-    // — so a number the model writes here always points at the same source
-    // the UI displays. Every chunk's documentId is guaranteed to be a key
-    // (the map is derived from these same chunks), so multiple chunks from
-    // one document correctly share one citation number instead of each
-    // getting its own.
     const sources = chunks
         .map((c) => `[${citationNumbers.get(c.documentId)}] (from "${c.documentTitle}")\n${c.content}`)
         .join("\n\n");
@@ -44,6 +33,10 @@ export async function generateAnswer(
         return callOllama(userMessage);
     }
 
+    if (provider === "gemini") {
+        return callGemini(userMessage);
+    }
+
     if (provider !== "anthropic") {
         console.warn(
             `Unrecognized LLM_PROVIDER "${provider}" — falling back to anthropic.`
@@ -53,10 +46,6 @@ export async function generateAnswer(
 }
 
 async function callAnthropic(userMessage: string): Promise<string> {
-    // Constructed lazily (per call, not at module load) so importing this
-    // file never throws just because ANTHROPIC_API_KEY is unset — e.g. a
-    // dev running entirely on LLM_PROVIDER=ollama with no Anthropic key
-    // configured at all.
     const client = new Anthropic();
 
     const response = await client.messages.create({
@@ -71,6 +60,25 @@ async function callAnthropic(userMessage: string): Promise<string> {
         (block): block is Anthropic.TextBlock => block.type === "text"
     );
     return textBlock?.text ?? "";
+}
+
+async function callGemini(userMessage: string): Promise<string> {
+    // Constructed lazily, same reasoning as callAnthropic — importing this
+    // file shouldn't throw just because GEMINI_API_KEY is unset when a
+    // different provider is active.
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+        throw new Error("GEMINI_API_KEY is not set.");
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+        model: GEMINI_MODEL,
+        systemInstruction: SYSTEM_PROMPT,
+    });
+
+    const result = await model.generateContent(userMessage);
+    return result.response.text();
 }
 
 interface OllamaChatResponse {
