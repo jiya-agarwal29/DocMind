@@ -42,11 +42,17 @@ export async function searchWorkspace(
     }
 
     const citations = buildCitations(chunks);
+
     const citationNumbers = new Map(
         citations.map((citation, i) => [citation.documentId, i + 1])
     );
 
-    const rawAnswer = await generateAnswer(question, chunks, citationNumbers);
+    const rawAnswer = await generateAnswer(
+        question,
+        chunks,
+        citationNumbers
+    );
+
     const answer = sanitizeCitationMarkers(rawAnswer, citations.length);
 
     return { answer, citations };
