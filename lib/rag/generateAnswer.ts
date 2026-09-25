@@ -20,10 +20,13 @@ Rules:
 export async function generateAnswer(
     question: string,
     chunks: RetrievedChunk[],
-    citationNumbers: Map<string, number>
+    citationNumbers: Map<string, number>,
 ): Promise<string> {
     const sources = chunks
-        .map((c) => `[${citationNumbers.get(c.documentId)}] (from "${c.documentTitle}")\n${c.content}`)
+        .map(
+            (c) =>
+                `[${citationNumbers.get(c.documentId)}] (from "${c.documentTitle}")\n${c.content}`,
+        )
         .join("\n\n");
     const userMessage = `Sources:\n\n${sources}\n\nQuestion: ${question}`;
 
@@ -39,7 +42,7 @@ export async function generateAnswer(
 
     if (provider !== "anthropic") {
         console.warn(
-            `Unrecognized LLM_PROVIDER "${provider}" — falling back to anthropic.`
+            `Unrecognized LLM_PROVIDER "${provider}" — falling back to anthropic.`,
         );
     }
     return callAnthropic(userMessage);
@@ -57,9 +60,49 @@ async function callAnthropic(userMessage: string): Promise<string> {
     });
 
     const textBlock = response.content.find(
-        (block): block is Anthropic.TextBlock => block.type === "text"
+        (block): block is Anthropic.TextBlock => block.type === "text",
     );
     return textBlock?.text ?? "";
+}
+
+export class GenerationTimeoutError extends Error {
+    constructor() {
+        super("Still generating your answer — please try again.");
+        this.name = "GenerationTimeoutError";
+    }
+}
+
+// One shared budget for the whole Gemini call, retries included, so the user
+// never waits longer than this no matter how many attempts happen inside it.
+const GEMINI_DEADLINE_MS = 20_000;
+// Delays before retry 1 and retry 2 (max 2 retries), each with ±25% jitter.
+const GEMINI_RETRY_DELAYS_MS = [1000, 3000];
+// Don't bother retrying if less than this would remain after the wait.
+const GEMINI_MIN_ATTEMPT_MS = 2000;
+
+const jitter = (ms: number) => Math.round(ms * (0.75 + Math.random() * 0.5));
+
+// Resolves after `ms`, or rejects early if the shared deadline aborts.
+const sleep = (ms: number, signal: AbortSignal) =>
+    new Promise<void>((resolve, reject) => {
+        if (signal.aborted) return reject(new GenerationTimeoutError());
+        const onAbort = () => {
+            clearTimeout(timer);
+            reject(new GenerationTimeoutError());
+        };
+        const timer = setTimeout(() => {
+            signal.removeEventListener("abort", onAbort);
+            resolve();
+        }, ms);
+        signal.addEventListener("abort", onAbort, { once: true });
+    });
+
+function isRetryableGeminiError(error: unknown): boolean {
+    if (typeof error !== "object" || error === null || !("status" in error)) {
+        return false;
+    }
+    const status = Number(error.status);
+    return status === 503 || status === 429;
 }
 
 async function callGemini(userMessage: string): Promise<string> {
@@ -77,8 +120,40 @@ async function callGemini(userMessage: string): Promise<string> {
         systemInstruction: SYSTEM_PROMPT,
     });
 
-    const result = await model.generateContent(userMessage);
-    return result.response.text();
+    const controller = new AbortController();
+    const deadline = Date.now() + GEMINI_DEADLINE_MS;
+    const timer = setTimeout(() => controller.abort(), GEMINI_DEADLINE_MS);
+
+    try {
+        for (let attempt = 0; ; attempt++) {
+            try {
+                const result = await model.generateContent(userMessage, {
+                    signal: controller.signal,
+                });
+                return result.response.text();
+            } catch (error) {
+                if (controller.signal.aborted) throw new GenerationTimeoutError();
+
+                const delay = GEMINI_RETRY_DELAYS_MS[attempt];
+                if (delay === undefined || !isRetryableGeminiError(error)) {
+                    throw error;
+                }
+
+                const wait = jitter(delay);
+                if (deadline - Date.now() < wait + GEMINI_MIN_ATTEMPT_MS) {
+                    throw new GenerationTimeoutError();
+                }
+
+                console.warn(
+                    `Gemini temporarily unavailable (${(error as { status?: unknown }).status}). ` +
+                        `Retry ${attempt + 1}/${GEMINI_RETRY_DELAYS_MS.length} in ${wait}ms...`,
+                );
+                await sleep(wait, controller.signal);
+            }
+        }
+    } finally {
+        clearTimeout(timer);
+    }
 }
 
 interface OllamaChatResponse {
@@ -104,7 +179,7 @@ async function callOllama(userMessage: string): Promise<string> {
     } catch (err) {
         throw new Error(
             `Could not reach Ollama at ${OLLAMA_BASE_URL}. Is the Ollama app/service running? ` +
-                `(${err instanceof Error ? err.message : String(err)})`
+            `(${err instanceof Error ? err.message : String(err)})`,
         );
     }
 
@@ -112,7 +187,7 @@ async function callOllama(userMessage: string): Promise<string> {
         const body = await res.text().catch(() => "");
         if (res.status === 404) {
             throw new Error(
-                `Ollama model "${OLLAMA_MODEL}" is not available. Run \`ollama pull ${OLLAMA_MODEL}\` and try again. (${body})`
+                `Ollama model "${OLLAMA_MODEL}" is not available. Run \`ollama pull ${OLLAMA_MODEL}\` and try again. (${body})`,
             );
         }
         throw new Error(`Ollama request failed (${res.status}): ${body}`);
